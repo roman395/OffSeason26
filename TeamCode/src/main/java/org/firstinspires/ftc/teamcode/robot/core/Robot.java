@@ -2,6 +2,9 @@ package org.firstinspires.ftc.teamcode.robot.core;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.robot.subsystems.DriveSubsystem;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -24,10 +27,11 @@ public final class Robot {
   private final List<Subsystem> subsystems = new ArrayList<>();
   
   private LifecycleState state = LifecycleState.NEW;
-  
+  public final DriveSubsystem drive;
   public Robot(HardwareMap hardwareMap) {
     Objects.requireNonNull(hardwareMap, "hardwareMap");
     
+    drive = register(new DriveSubsystem(Constants.createFollower(hardwareMap)));
     /*
      * Здесь позднее появится создание подсистем:
      *
