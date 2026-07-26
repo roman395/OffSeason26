@@ -12,6 +12,7 @@ public final class DriveSubsystem extends AbstractSubsystem {
   
   private final Follower follower;
   private boolean teleOpActive;
+  private boolean useBrakeMode = true;
   
   public DriveSubsystem(Follower follower) {
     super("Drive");
@@ -50,6 +51,8 @@ public final class DriveSubsystem extends AbstractSubsystem {
   }
   
   public void startTeleOp(boolean useBrakeMode) {
+    this.useBrakeMode = useBrakeMode;
+    
     follower.startTeleOpDrive(useBrakeMode);
     teleOpActive = true;
   }
@@ -103,4 +106,16 @@ public final class DriveSubsystem extends AbstractSubsystem {
         robotCentric
     );
   }
+  
+  public void completeAutomaticDrive() {
+    if (teleOpActive) {
+      follower.startTeleOpDrive(useBrakeMode);
+    }
+  }
+  
+  public void cancelAutomaticDrive() {
+    follower.breakFollowing();
+    completeAutomaticDrive();
+  }
+  
 }

@@ -3,6 +3,12 @@ package org.firstinspires.ftc.teamcode.robot.commands.drive;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.behaviors.InterruptedBehavior;
 import com.qualcomm.robotcore.util.Range;
+import com.pedropathing.geometry.Pose;
+import com.pedropathing.ivy.CommandBuilder;
+import com.pedropathing.ivy.behaviors.EndCondition;
+import com.pedropathing.ivy.pedro.PedroCommands;
+import com.pedropathing.paths.PathChain;
+import com.pedropathing.paths.PathConstraints;
 
 import org.firstinspires.ftc.teamcode.robot.subsystems.DriveSubsystem;
 
@@ -11,7 +17,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
 public final class DriveCommands {
-  
+  private static final int AUTOMATIC_DRIVE_PRIORITY = 10;
   private DriveCommands() {
     // Utility class: instances are not needed.
   }
@@ -104,6 +110,172 @@ public final class DriveCommands {
         .setInterruptedBehavior(
             InterruptedBehavior.SUSPEND
         );
+  }
+  public static Command followPath(
+      DriveSubsystem drive,
+      PathChain path
+  ) {
+    Objects.requireNonNull(path, "path cannot be null");
+    
+    return configureAutomaticDrive(
+        drive,
+        PedroCommands.follow(
+            drive.getFollower(),
+            path
+        )
+    );
+  }
+  
+  public static Command followPath(
+      DriveSubsystem drive,
+      PathChain path,
+      boolean holdEnd
+  ) {
+    Objects.requireNonNull(path, "path cannot be null");
+    
+    return configureAutomaticDrive(
+        drive,
+        PedroCommands.follow(
+            drive.getFollower(),
+            path,
+            holdEnd
+        )
+    );
+  }
+  
+  public static Command followPath(
+      DriveSubsystem drive,
+      PathChain path,
+      double maxPower
+  ) {
+    Objects.requireNonNull(path, "path cannot be null");
+    
+    return configureAutomaticDrive(
+        drive,
+        PedroCommands.follow(
+            drive.getFollower(),
+            path,
+            maxPower
+        )
+    );
+  }
+  
+  public static Command followPath(
+      DriveSubsystem drive,
+      PathChain path,
+      boolean holdEnd,
+      double maxPower
+  ) {
+    Objects.requireNonNull(path, "path cannot be null");
+    
+    return configureAutomaticDrive(
+        drive,
+        PedroCommands.follow(
+            drive.getFollower(),
+            path,
+            holdEnd,
+            maxPower
+        )
+    );
+  }
+  
+  public static Command turnTo(
+      DriveSubsystem drive,
+      double headingRadians
+  ) {
+    return configureAutomaticDrive(
+        drive,
+        PedroCommands.turnTo(
+            drive.getFollower(),
+            headingRadians
+        )
+    );
+  }
+  
+  public static Command turnTo(
+      DriveSubsystem drive,
+      double headingRadians,
+      PathConstraints constraints
+  ) {
+    Objects.requireNonNull(
+        constraints,
+        "constraints cannot be null"
+    );
+    
+    return configureAutomaticDrive(
+        drive,
+        PedroCommands.turnTo(
+            drive.getFollower(),
+            headingRadians,
+            constraints
+        )
+    );
+  }
+  
+  public static Command holdCurrentPose(
+      DriveSubsystem drive
+  ) {
+    return configureAutomaticDrive(
+        drive,
+        PedroCommands.hold(
+            drive.getFollower()
+        )
+    );
+  }
+  
+  public static Command holdPose(
+      DriveSubsystem drive,
+      Pose pose
+  ) {
+    Objects.requireNonNull(pose, "pose cannot be null");
+    
+    return configureAutomaticDrive(
+        drive,
+        PedroCommands.hold(
+            drive.getFollower(),
+            pose
+        )
+    );
+  }
+  
+  public static Command holdPose(
+      DriveSubsystem drive,
+      Pose pose,
+      PathConstraints constraints
+  ) {
+    Objects.requireNonNull(pose, "pose cannot be null");
+    Objects.requireNonNull(
+        constraints,
+        "constraints cannot be null"
+    );
+    
+    return configureAutomaticDrive(
+        drive,
+        PedroCommands.hold(
+            drive.getFollower(),
+            pose,
+            constraints
+        )
+    );
+  }
+  
+  private static Command configureAutomaticDrive(
+      DriveSubsystem drive,
+      CommandBuilder command
+  ) {
+    Objects.requireNonNull(drive, "drive cannot be null");
+    Objects.requireNonNull(command, "command cannot be null");
+    
+    return command
+        .requiring(drive)
+        .setPriority(AUTOMATIC_DRIVE_PRIORITY)
+        .setEnd(endCondition -> {
+          if (endCondition == EndCondition.NATURALLY) {
+            drive.completeAutomaticDrive();
+          } else {
+            drive.cancelAutomaticDrive();
+          }
+        });
   }
   
   private static double shapeInput(
