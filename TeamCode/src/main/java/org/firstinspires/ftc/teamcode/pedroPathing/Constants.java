@@ -5,7 +5,7 @@ import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.FollowerBuilder;
 import com.pedropathing.paths.PathConstraints;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-
+// TODO: Configure and tune on the physical robot.
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants();
 
