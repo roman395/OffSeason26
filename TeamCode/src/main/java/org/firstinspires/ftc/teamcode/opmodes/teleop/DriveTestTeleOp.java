@@ -2,10 +2,11 @@ package org.firstinspires.ftc.teamcode.opmodes.teleop;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.ivy.Scheduler;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.opmodes.base.BaseRobotOpMode;
+import org.firstinspires.ftc.teamcode.robot.commands.drive.DriveCommands;
 
 @Configurable
 @TeleOp(name = "Drive Test", group = "Test")
@@ -19,32 +20,28 @@ public final class DriveTestTeleOp extends BaseRobotOpMode {
   
   @Override
   protected void onRobotStart() {
-    robot.drive.startTeleOp();
+    Scheduler.schedule(
+        DriveCommands.teleOpDrive(
+            robot.drive,
+            
+            () -> -gamepad1.left_stick_y,
+            () -> -gamepad1.left_stick_x,
+            () -> -gamepad1.right_stick_x,
+            
+            () -> fieldCentric,
+            
+            () -> slowMode
+                ? SLOW_MODE_MULTIPLIER
+                : 1.0,
+            
+            () -> DEADBAND
+        )
+    );
   }
   
   @Override
   protected void onRobotLoop(double dtSeconds) {
     updateModes();
-    
-    double speedMultiplier = slowMode
-        ? Range.clip(SLOW_MODE_MULTIPLIER, 0.0, 1.0)
-        : 1.0;
-    
-    double forward = applyDeadband(-gamepad1.left_stick_y)
-        * speedMultiplier;
-    
-    double strafe = applyDeadband(-gamepad1.left_stick_x)
-        * speedMultiplier;
-    
-    double turn = applyDeadband(-gamepad1.right_stick_x)
-        * speedMultiplier;
-    
-    if (fieldCentric) {
-      robot.drive.driveFieldCentric(forward, strafe, turn);
-    } else {
-      robot.drive.driveRobotCentric(forward, strafe, turn);
-    }
-    
     updateTelemetry(dtSeconds);
   }
   
@@ -77,19 +74,5 @@ public final class DriveTestTeleOp extends BaseRobotOpMode {
     );
     
     telemetry.update();
-  }
-  
-  private static double applyDeadband(double value) {
-    double deadband = Range.clip(DEADBAND, 0.0, 0.95);
-    double magnitude = Math.abs(value);
-    
-    if (magnitude <= deadband) {
-      return 0.0;
-    }
-    
-    double scaledMagnitude =
-        (magnitude - deadband) / (1.0 - deadband);
-    
-    return Math.copySign(scaledMagnitude, value);
   }
 }
