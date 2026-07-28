@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.teamcode.robot.config.LiftConstants;
 import org.firstinspires.ftc.teamcode.robot.core.AbstractSubsystem;
 
 import java.util.Objects;
@@ -14,6 +15,22 @@ public final class LiftSubsystem extends AbstractSubsystem {
   public enum ControlMode {
     MANUAL,
     POSITION
+  }
+  
+  public enum Preset {
+    BOTTOM(LiftConstants.BOTTOM_TICKS),
+    MIDDLE(LiftConstants.MIDDLE_TICKS),
+    TOP(LiftConstants.TOP_TICKS);
+    
+    private final int positionTicks;
+    
+    Preset(int positionTicks) {
+      this.positionTicks = positionTicks;
+    }
+    
+    public int getPositionTicks() {
+      return positionTicks;
+    }
   }
   
   private static final DcMotorSimple.Direction LEFT_DIRECTION =
@@ -33,9 +50,9 @@ public final class LiftSubsystem extends AbstractSubsystem {
   private int targetPositionTicks;
   private double positionPowerLimit;
   
-  private double kP = 0.0;
-  private double kI = 0.0;
-  private double kD = 0.0;
+  private double kP = LiftConstants.KP;
+  private double kI = LiftConstants.KI;
+  private double kD = LiftConstants.KD;
   
   private double integralError;
   private double previousError;
@@ -145,10 +162,28 @@ public final class LiftSubsystem extends AbstractSubsystem {
     controlMode = ControlMode.POSITION;
   }
   
+  public void moveToPosition(int targetPositionTicks) {
+    moveToPosition(
+        targetPositionTicks,
+        LiftConstants.POSITION_MAX_POWER
+    );
+  }
+  
+  public void moveToPreset(Preset preset) {
+    Objects.requireNonNull(preset, "preset");
+    moveToPosition(preset.getPositionTicks());
+  }
+  
   public void holdCurrentPosition(double maxPower) {
     moveToPosition(
         (int) Math.round(getAveragePositionTicks()),
         maxPower
+    );
+  }
+  
+  public void holdCurrentPosition() {
+    holdCurrentPosition(
+        LiftConstants.POSITION_MAX_POWER
     );
   }
   
@@ -231,6 +266,12 @@ public final class LiftSubsystem extends AbstractSubsystem {
         && Math.abs(getPositionErrorTicks()) <= toleranceTicks;
   }
   
+  public boolean isAtTarget() {
+    return isAtTarget(
+        LiftConstants.POSITION_TOLERANCE_TICKS
+    );
+  }
+  
   private double calculatePositionPower(double dtSeconds) {
     double error = getPositionErrorTicks();
     double derivative = 0.0;
@@ -309,4 +350,5 @@ public final class LiftSubsystem extends AbstractSubsystem {
       );
     }
   }
+  
 }
