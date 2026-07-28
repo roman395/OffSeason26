@@ -34,4 +34,6 @@ public final class LiftConstants {
   public static final int BOTTOM_TICKS = 0;
   public static final int MIDDLE_TICKS = 0;
   public static final int TOP_TICKS = 0;
+  public static final double MANUAL_MAX_POWER = 0.20;
+  public static final double MANUAL_DEADBAND = 0.05;
 }
