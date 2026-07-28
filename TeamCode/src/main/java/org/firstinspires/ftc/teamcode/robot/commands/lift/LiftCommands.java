@@ -48,7 +48,12 @@ public final class LiftCommands {
           
           if (Math.abs(input)
               <= LiftConstants.MANUAL_DEADBAND) {
-            input = 0.0;
+            if (lift.getControlMode()
+                == LiftSubsystem.ControlMode.MANUAL) {
+              lift.setManualPower(0.0);
+            }
+            
+            return;
           }
           
           lift.setManualPower(
