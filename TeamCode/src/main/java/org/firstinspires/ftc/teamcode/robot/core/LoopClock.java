@@ -9,7 +9,7 @@ public final class LoopClock {
   
   /**
    * Максимальное значение dt, передаваемое подсистемам.
-   *
+   * <p>
    * Защищает регуляторы от большого скачка времени,
    * например после остановки на breakpoint.
    */
@@ -84,7 +84,7 @@ public final class LoopClock {
   
   /**
    * Возвращает настоящее время цикла без ограничения.
-   *
+   * <p>
    * Используется для диагностики и телеметрии.
    */
   public double getRawDtSeconds() {
@@ -101,4 +101,5 @@ public final class LoopClock {
     
     return 1.0 / rawDtSeconds;
   }
+  
 }

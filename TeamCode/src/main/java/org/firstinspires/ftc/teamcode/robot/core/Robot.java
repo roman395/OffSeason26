@@ -1,7 +1,9 @@
 package org.firstinspires.ftc.teamcode.robot.core;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 
+import org.firstinspires.ftc.teamcode.robot.subsystems.LiftSubsystem;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.robot.subsystems.DriveSubsystem;
 
@@ -12,7 +14,7 @@ import java.util.Objects;
 
 /**
  * Главный контейнер робота.
- *
+ * <p>
  * Создаёт, хранит и обновляет все подсистемы в правильном порядке.
  */
 public final class Robot {
@@ -28,17 +30,21 @@ public final class Robot {
   
   private LifecycleState state = LifecycleState.NEW;
   public final DriveSubsystem drive;
+  public final LiftSubsystem lift;
+  
   public Robot(HardwareMap hardwareMap) {
     Objects.requireNonNull(hardwareMap, "hardwareMap");
     
-    drive = register(new DriveSubsystem(Constants.createFollower(hardwareMap)));
-    /*
-     * Здесь позднее появится создание подсистем:
-     *
-     * drive = register(new DriveSubsystem(...));
-     * lift = register(new LiftSubsystem(...));
-     * intake = register(new IntakeSubsystem(...));
-     */
+    drive = register(
+        new DriveSubsystem(Constants.createFollower(hardwareMap))
+    );
+    
+    lift = register(
+        new LiftSubsystem(
+            hardwareMap.get(DcMotorEx.class, "liftLeft"),
+            hardwareMap.get(DcMotorEx.class, "liftRight")
+        )
+    );
   }
   
   /**
@@ -151,7 +157,7 @@ public final class Robot {
   
   /**
    * Возвращает список только для чтения.
-   *
+   * <p>
    * Позднее он понадобится менеджеру телеметрии.
    */
   public List<Subsystem> getSubsystems() {
@@ -185,4 +191,5 @@ public final class Robot {
       originalException.addSuppressed(stopException);
     }
   }
+  
 }
