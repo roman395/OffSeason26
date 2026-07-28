@@ -8,7 +8,7 @@ import org.firstinspires.ftc.teamcode.robot.core.Robot;
 
 /**
  * Общая основа для TeleOp, Autonomous и тестовых OpMode.
- *
+ * <p>
  * Управляет:
  * - жизненным циклом Robot;
  * - временем цикла;
@@ -224,4 +224,5 @@ public abstract class BaseRobotOpMode extends OpMode {
     first.addSuppressed(next);
     return first;
   }
+  
 }

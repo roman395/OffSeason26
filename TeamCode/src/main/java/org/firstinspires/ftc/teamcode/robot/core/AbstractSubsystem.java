@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.robot.core;
 
 /**
  * Базовая реализация подсистемы.
- *
+ * <p>
  * Управляет:
  * - жизненным циклом;
  * - включением и отключением;
@@ -161,7 +161,7 @@ public abstract class AbstractSubsystem implements Subsystem {
   
   /**
    * Переводит подсистему в аварийное состояние без остановки OpMode.
-   *
+   * <p>
    * После вызова fail() конкретная подсистема должна закончить
    * текущий метод через return.
    */
@@ -215,4 +215,5 @@ public abstract class AbstractSubsystem implements Subsystem {
    * в безопасное состояние.
    */
   protected abstract void stopOutputs();
+  
 }

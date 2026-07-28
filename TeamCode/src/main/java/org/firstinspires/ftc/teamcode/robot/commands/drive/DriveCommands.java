@@ -18,6 +18,7 @@ import java.util.function.DoubleSupplier;
 
 public final class DriveCommands {
   private static final int AUTOMATIC_DRIVE_PRIORITY = 10;
+  
   private DriveCommands() {
     // Utility class: instances are not needed.
   }
@@ -111,6 +112,7 @@ public final class DriveCommands {
             InterruptedBehavior.SUSPEND
         );
   }
+  
   public static Command followPath(
       DriveSubsystem drive,
       PathChain path
@@ -294,4 +296,5 @@ public final class DriveCommands {
     
     return Math.copySign(scaledMagnitude, clippedInput);
   }
+  
 }

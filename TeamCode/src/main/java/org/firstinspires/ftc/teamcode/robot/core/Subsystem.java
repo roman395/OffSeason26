@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.robot.core;
 
 /**
  * Общий контракт для всех самостоятельных механизмов робота.
- *
+ * <p>
  * Например:
  * - ходовая;
  * - лифт;
@@ -58,4 +58,5 @@ public interface Subsystem {
    * Описание текущей ошибки или пустая строка.
    */
   String getFaultMessage();
+  
 }
