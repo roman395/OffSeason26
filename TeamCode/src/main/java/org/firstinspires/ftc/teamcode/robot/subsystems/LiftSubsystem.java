@@ -11,6 +11,11 @@ import java.util.Objects;
 
 public final class LiftSubsystem extends AbstractSubsystem {
   
+  public enum ControlMode {
+    MANUAL,
+    POSITION
+  }
+  
   private static final DcMotorSimple.Direction LEFT_DIRECTION =
       DcMotorSimple.Direction.FORWARD;
   
@@ -20,7 +25,21 @@ public final class LiftSubsystem extends AbstractSubsystem {
   private final DcMotorEx leftMotor;
   private final DcMotorEx rightMotor;
   
+  private ControlMode controlMode = ControlMode.MANUAL;
+  
   private double manualPower;
+  private double appliedPower;
+  
+  private int targetPositionTicks;
+  private double positionPowerLimit;
+  
+  private double kP = 0.0;
+  private double kI = 0.0;
+  private double kD = 0.0;
+  
+  private double integralError;
+  private double previousError;
+  private boolean hasPreviousError;
   
   public LiftSubsystem(
       DcMotorEx leftMotor,
@@ -41,25 +60,45 @@ public final class LiftSubsystem extends AbstractSubsystem {
   
   @Override
   protected void onInit() {
-    manualPower = 0.0;
-    
     configureMotor(leftMotor, LEFT_DIRECTION);
     configureMotor(rightMotor, RIGHT_DIRECTION);
+    
+    controlMode = ControlMode.MANUAL;
+    manualPower = 0.0;
+    appliedPower = 0.0;
+    
+    targetPositionTicks = 0;
+    positionPowerLimit = 0.0;
+    
+    resetPidState();
   }
   
   @Override
   protected void onStart() {
+    controlMode = ControlMode.MANUAL;
     manualPower = 0.0;
+    targetPositionTicks = (int) Math.round(
+        getAveragePositionTicks()
+    );
+    resetPidState();
   }
   
   @Override
   protected void onPeriodic(double dtSeconds) {
+    if (controlMode == ControlMode.POSITION) {
+      applyPower(calculatePositionPower(dtSeconds));
+      return;
+    }
+    
     applyPower(manualPower);
   }
   
   @Override
   protected void stopOutputs() {
+    controlMode = ControlMode.MANUAL;
     manualPower = 0.0;
+    positionPowerLimit = 0.0;
+    resetPidState();
     applyPower(0.0);
   }
   
@@ -68,21 +107,92 @@ public final class LiftSubsystem extends AbstractSubsystem {
       return;
     }
     
-    if (Double.isNaN(power) || Double.isInfinite(power)) {
-      throw new IllegalArgumentException(
-          "Lift power must be finite"
-      );
+    requireFinite(power, "Lift power");
+    
+    if (controlMode != ControlMode.MANUAL) {
+      controlMode = ControlMode.MANUAL;
+      resetPidState();
     }
     
     manualPower = Range.clip(power, -1.0, 1.0);
   }
   
+  public void moveToPosition(
+      int targetPositionTicks,
+      double maxPower
+  ) {
+    if (!isEnabled()) {
+      return;
+    }
+    
+    requireFinite(maxPower, "Position power limit");
+    
+    if (maxPower <= 0.0 || maxPower > 1.0) {
+      throw new IllegalArgumentException(
+          "Position power limit must be in (0.0, 1.0]"
+      );
+    }
+    
+    boolean targetChanged =
+        this.targetPositionTicks != targetPositionTicks;
+    
+    if (controlMode != ControlMode.POSITION || targetChanged) {
+      resetPidState();
+    }
+    
+    this.targetPositionTicks = targetPositionTicks;
+    positionPowerLimit = maxPower;
+    controlMode = ControlMode.POSITION;
+  }
+  
+  public void holdCurrentPosition(double maxPower) {
+    moveToPosition(
+        (int) Math.round(getAveragePositionTicks()),
+        maxPower
+    );
+  }
+  
   public void stopMovement() {
+    controlMode = ControlMode.MANUAL;
     manualPower = 0.0;
+    positionPowerLimit = 0.0;
+    resetPidState();
+    applyPower(0.0);
+  }
+  
+  public void setPidCoefficients(
+      double kP,
+      double kI,
+      double kD
+  ) {
+    requireFinite(kP, "kP");
+    requireFinite(kI, "kI");
+    requireFinite(kD, "kD");
+    
+    this.kP = kP;
+    this.kI = kI;
+    this.kD = kD;
+    resetPidState();
+  }
+  
+  public ControlMode getControlMode() {
+    return controlMode;
   }
   
   public double getManualPower() {
     return manualPower;
+  }
+  
+  public double getAppliedPower() {
+    return appliedPower;
+  }
+  
+  public int getTargetPositionTicks() {
+    return targetPositionTicks;
+  }
+  
+  public double getPositionPowerLimit() {
+    return positionPowerLimit;
   }
   
   public int getLeftPositionTicks() {
@@ -100,9 +210,67 @@ public final class LiftSubsystem extends AbstractSubsystem {
     ) / 2.0;
   }
   
+  public double getPositionErrorTicks() {
+    return targetPositionTicks
+        - getAveragePositionTicks();
+  }
+  
   public int getSynchronizationErrorTicks() {
     return getLeftPositionTicks()
         - getRightPositionTicks();
+  }
+  
+  public boolean isAtTarget(int toleranceTicks) {
+    if (toleranceTicks < 0) {
+      throw new IllegalArgumentException(
+          "Position tolerance cannot be negative"
+      );
+    }
+    
+    return controlMode == ControlMode.POSITION
+        && Math.abs(getPositionErrorTicks()) <= toleranceTicks;
+  }
+  
+  private double calculatePositionPower(double dtSeconds) {
+    double error = getPositionErrorTicks();
+    double derivative = 0.0;
+    
+    if (hasPreviousError && dtSeconds > 0.0) {
+      derivative = (error - previousError) / dtSeconds;
+    }
+    
+    if (kI == 0.0) {
+      integralError = 0.0;
+    } else if (dtSeconds > 0.0) {
+      double maxIntegralError =
+          positionPowerLimit / Math.abs(kI);
+      
+      integralError = Range.clip(
+          integralError + error * dtSeconds,
+          -maxIntegralError,
+          maxIntegralError
+      );
+    }
+    
+    previousError = error;
+    hasPreviousError = true;
+    
+    double output =
+        kP * error
+            + kI * integralError
+            + kD * derivative;
+    
+    return Range.clip(
+        output,
+        -positionPowerLimit,
+        positionPowerLimit
+    );
+  }
+  
+  private void resetPidState() {
+    integralError = 0.0;
+    previousError = 0.0;
+    hasPreviousError = false;
   }
   
   private void configureMotor(
@@ -126,8 +294,20 @@ public final class LiftSubsystem extends AbstractSubsystem {
   }
   
   private void applyPower(double power) {
+    appliedPower = power;
     leftMotor.setPower(power);
     rightMotor.setPower(power);
+  }
+  
+  private static void requireFinite(
+      double value,
+      String name
+  ) {
+    if (Double.isNaN(value) || Double.isInfinite(value)) {
+      throw new IllegalArgumentException(
+          name + " must be finite"
+      );
+    }
   }
   
 }
