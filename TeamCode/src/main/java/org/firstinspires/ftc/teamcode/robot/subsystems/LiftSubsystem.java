@@ -77,6 +77,7 @@ public final class LiftSubsystem extends AbstractSubsystem {
   
   @Override
   protected void onInit() {
+    validateSoftLimitsConfiguration();
     configureMotor(leftMotor, LEFT_DIRECTION);
     configureMotor(rightMotor, RIGHT_DIRECTION);
     
@@ -102,12 +103,17 @@ public final class LiftSubsystem extends AbstractSubsystem {
   
   @Override
   protected void onPeriodic(double dtSeconds) {
+    double requestedPower;
+    
     if (controlMode == ControlMode.POSITION) {
-      applyPower(calculatePositionPower(dtSeconds));
-      return;
+      requestedPower = calculatePositionPower(dtSeconds);
+    } else {
+      requestedPower = manualPower;
     }
     
-    applyPower(manualPower);
+    applyPower(
+        applySoftLimits(requestedPower)
+    );
   }
   
   @Override
@@ -150,14 +156,21 @@ public final class LiftSubsystem extends AbstractSubsystem {
       );
     }
     
-    boolean targetChanged =
-        this.targetPositionTicks != targetPositionTicks;
+    int limitedTargetPositionTicks =
+        clampTargetPosition(targetPositionTicks);
     
-    if (controlMode != ControlMode.POSITION || targetChanged) {
+    boolean targetChanged =
+        this.targetPositionTicks
+            != limitedTargetPositionTicks;
+    
+    if (controlMode != ControlMode.POSITION
+        || targetChanged) {
       resetPidState();
     }
     
-    this.targetPositionTicks = targetPositionTicks;
+    this.targetPositionTicks =
+        limitedTargetPositionTicks;
+    
     positionPowerLimit = maxPower;
     controlMode = ControlMode.POSITION;
   }
@@ -255,6 +268,26 @@ public final class LiftSubsystem extends AbstractSubsystem {
         - getRightPositionTicks();
   }
   
+  public boolean areSoftLimitsEnabled() {
+    return LiftConstants.SOFT_LIMITS_ENABLED;
+  }
+  
+  public boolean isAtLowerSoftLimit() {
+    return LiftConstants.SOFT_LIMITS_ENABLED
+        && Math.min(
+        getLeftPositionTicks(),
+        getRightPositionTicks()
+    ) <= LiftConstants.MIN_POSITION_TICKS;
+  }
+  
+  public boolean isAtUpperSoftLimit() {
+    return LiftConstants.SOFT_LIMITS_ENABLED
+        && Math.max(
+        getLeftPositionTicks(),
+        getRightPositionTicks()
+    ) >= LiftConstants.MAX_POSITION_TICKS;
+  }
+  
   public boolean isAtTarget(int toleranceTicks) {
     if (toleranceTicks < 0) {
       throw new IllegalArgumentException(
@@ -270,6 +303,52 @@ public final class LiftSubsystem extends AbstractSubsystem {
     return isAtTarget(
         LiftConstants.POSITION_TOLERANCE_TICKS
     );
+  }
+  
+  private double applySoftLimits(double power) {
+    if (!LiftConstants.SOFT_LIMITS_ENABLED) {
+      return power;
+    }
+    
+    if (power < 0.0 && isAtLowerSoftLimit()) {
+      return 0.0;
+    }
+    
+    if (power > 0.0 && isAtUpperSoftLimit()) {
+      return 0.0;
+    }
+    
+    return power;
+  }
+  
+  private static int clampTargetPosition(
+      int targetPositionTicks
+  ) {
+    if (!LiftConstants.SOFT_LIMITS_ENABLED) {
+      return targetPositionTicks;
+    }
+    
+    return Math.max(
+        LiftConstants.MIN_POSITION_TICKS,
+        Math.min(
+            LiftConstants.MAX_POSITION_TICKS,
+            targetPositionTicks
+        )
+    );
+  }
+  
+  private static void validateSoftLimitsConfiguration() {
+    if (!LiftConstants.SOFT_LIMITS_ENABLED) {
+      return;
+    }
+    
+    if (LiftConstants.MIN_POSITION_TICKS
+        >= LiftConstants.MAX_POSITION_TICKS) {
+      throw new IllegalStateException(
+          "Lift MIN_POSITION_TICKS must be less "
+              + "than MAX_POSITION_TICKS"
+      );
+    }
   }
   
   private double calculatePositionPower(double dtSeconds) {

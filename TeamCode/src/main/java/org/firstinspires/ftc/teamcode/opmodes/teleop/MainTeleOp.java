@@ -167,5 +167,12 @@ public final class MainTeleOp extends BaseRobotOpMode {
         "%.2f",
         robot.lift.getAppliedPower()
     );
+    telemetry.addData(
+        "Lift limits",
+        "enabled %s | lower %s | upper %s",
+        robot.lift.areSoftLimitsEnabled(),
+        robot.lift.isAtLowerSoftLimit(),
+        robot.lift.isAtUpperSoftLimit()
+    );
   }
 }
