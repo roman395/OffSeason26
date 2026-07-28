@@ -309,5 +309,4 @@ public final class LiftSubsystem extends AbstractSubsystem {
       );
     }
   }
-  
 }
